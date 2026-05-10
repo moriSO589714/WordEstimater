@@ -35,6 +35,13 @@ public class WordEstimater
     public List<string> ReturnEstimatedStrs(string input, int returnDepth)
     {
         string[] splitInput = input.Split(_separateMark);
+        //最後が区切り文字で終わっている場合は除去
+        if(splitInput.Last() == "")
+        {
+            List<string> removed = splitInput.ToList();
+            removed.RemoveAt(splitInput.Length - 1);
+            splitInput = removed.ToArray();
+        }
         string[] differenceInput = null;
         int samePoint = -1;
         WordEmtCell searchStartCell = null;
