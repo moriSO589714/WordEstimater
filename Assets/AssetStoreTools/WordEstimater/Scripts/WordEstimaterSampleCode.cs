@@ -48,6 +48,7 @@ public class WordEstimaterSampleCode : MonoBehaviour
     [SerializeField] float _resultUIWidth; //候補と候補の間隔
     [SerializeField] GameObject _uiCanvas;
     List<GameObject> _resultUIPool = new List<GameObject>();
+    List<GameObject> _resultUIPool2 = new List<GameObject>();
 
     private void Awake()
     {
@@ -87,12 +88,28 @@ public class WordEstimaterSampleCode : MonoBehaviour
         if(estimatedStrs == null) //予測候補が1つもない場合
         {
             //要素数0のリストを渡すことで全削除
-            ReplaceUIPool(new List<string>());
+            ReplaceUIPool(new List<string>(), _resultUIPool);
         }
         else
         {
             //UIに反映
-            ReflectForUI(estimatedStrs, _inputFieldOfSentence.gameObject);
+            ReflectForUI(estimatedStrs, _inputFieldOfSentence.gameObject, _resultUIPool);
+        }
+    }
+
+    public void ReceiveWord()
+    {
+        //inputfieldの値を取得
+        string valueFromIF = _inputFieldOfWord.text;
+        //予測変換を取得
+        List<string> estimatedStrs = DoEstimateInWord(valueFromIF);
+        if(estimatedStrs == null)
+        {
+            ReplaceUIPool(new List<string>(), _resultUIPool2);
+        }
+        else
+        {
+            ReflectForUI(estimatedStrs, _inputFieldOfWord.gameObject, _resultUIPool2);
         }
     }
 
@@ -132,9 +149,9 @@ public class WordEstimaterSampleCode : MonoBehaviour
     /// <summary>
     /// 予測結果をUIに反映させる
     /// </summary>
-    private void ReflectForUI(List<string> estimatedList, GameObject inputFieldObject)
+    private void ReflectForUI(List<string> estimatedList, GameObject inputFieldObject, List<GameObject> UIPool)
     {
-        List<string>restStrs = ReplaceUIPool(estimatedList);
+        List<string>restStrs = ReplaceUIPool(estimatedList, UIPool);
         if (restStrs == null || restStrs.Count == 0) return;
 
         Vector2 instancePos = inputFieldObject.transform.position;
@@ -147,46 +164,46 @@ public class WordEstimaterSampleCode : MonoBehaviour
             GameObject createUIObj = Instantiate(_resultUI, instancePos, Quaternion.identity, parent: _uiCanvas.transform);
             //値を反映
             createUIObj.GetComponent<Text>().text = estimated;
-            _resultUIPool.Add(createUIObj);
+            UIPool.Add(createUIObj);
         }
     }
 
-    private List<string> ReplaceUIPool(List<string> newInput)
+    private List<string> ReplaceUIPool(List<string> newInput, List<GameObject> UIPool)
     {
         if(newInput.Count == 0)
         {
-            foreach(GameObject g in _resultUIPool)
+            foreach(GameObject g in UIPool)
             {
                 g.SetActive(false);
             }
             return new List<string>();
         }
-        else if(newInput.Count <= _resultUIPool.Count)
+        else if(newInput.Count <= UIPool.Count)
         {
-            for(int i = 0; i < _resultUIPool.Count; i++)
+            for(int i = 0; i < UIPool.Count; i++)
             {
                 if(i <= newInput.Count - 1)
                 {
-                    _resultUIPool[i].GetComponent<Text>().text = newInput[i];
-                    _resultUIPool[i].SetActive(true);
+                    UIPool[i].GetComponent<Text>().text = newInput[i];
+                    UIPool[i].SetActive(true);
                 }
                 else
                 {
-                    _resultUIPool[i].SetActive(false);
+                    UIPool[i].SetActive(false);
                 }
             }
             return new List<string>();
         }
-        else if(newInput.Count > _resultUIPool.Count)
+        else if(newInput.Count > UIPool.Count)
         {
-            for(int i = 0; i < _resultUIPool.Count; i++)
+            for(int i = 0; i < UIPool.Count; i++)
             {
-                _resultUIPool[i].GetComponent<Text>().text = newInput[i];
-                _resultUIPool[i].SetActive(true);
+                UIPool[i].GetComponent<Text>().text = newInput[i];
+                UIPool[i].SetActive(true);
             }
             List<string> returnStrs = new List<string>();
             //UIに反映されていないぶんを配列で返す
-            for(int i = _resultUIPool.Count; i < newInput.Count; i++)
+            for(int i = UIPool.Count; i < newInput.Count; i++)
             {
                 returnStrs.Add(newInput[i]);
             }
