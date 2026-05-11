@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 public class WordEstimater
 {
@@ -36,7 +37,6 @@ public class WordEstimater
     {
         string[] splitInput = input.Split(_separateMark);
         //最後が区切り文字で終わっている場合は除去
-
         if (splitInput.Last() == "")
         {
             List<string> removed = splitInput.ToList();
@@ -52,54 +52,58 @@ public class WordEstimater
         //もし検索が2回目以降であれば、前回との差分を取得して処理を抑える
         if (_oldSplitWords != null && _oldSplitWords.Count() != 0)
         {
-            //何単語目まで一致しているか
+            //何文節目まで一致しているか
             samePoint = ReturnSamePoint(splitInput);
 
-            //前回の文章が完全に新しい入力に含まれている場合
-            //(例) 1: /aaa bbb ccc ddd
-            //     2: /aaa bbb ccc ddd eee
-            if (input.StartsWith(_oldInput))
+            if (samePoint != -1) //増加または同じ単語数
             {
-                int oldReturnLength = DepthToOverAll(_oldDepth, _oldSplitWords.Length);
-                int newReturnLength = DepthToOverAll(returnDepth, splitInput.Length);
+                //前回の文章が完全に新しい入力に含まれている場合(絶対に前回のinputよりも今回のinputのほうが長い)
+                //(例) 1: /aaa bbb ccc ddd
+                //     2: /aaa bbb ccc ddd eee
+                if (input.StartsWith(_oldInput))
+                {
+                    int oldReturnLength = DepthToOverAll(_oldDepth, _oldSplitWords.Length);
+                    int newReturnLength = DepthToOverAll(returnDepth, splitInput.Length);
 
-                //完全に前回の入力と同じかつ、返す長さも同じ
-                if (splitInput.SequenceEqual(_oldSplitWords) && _oldDepth == returnDepth)
-                {
-                    return _oldReturnList;
-                }
-                //返す候補文の深さが前回返したもの以下か、無制限
-                else if (oldReturnLength >= newReturnLength || (oldReturnLength == -1 && newReturnLength == -1))
-                {
-                    List<string> reuseReturnStr = RemoveFromOldReturn(splitInput, samePoint, newReturnLength);
-                    SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(reuseReturnStr), returnDepth);
-                    return reuseReturnStr;
-                }
-                //完全一致しているが、前回返した文章以降の要素も求められている場合
-                else if (oldReturnLength < newReturnLength)
-                {
-                    List<WordEmtCell> cells = new List<WordEmtCell>();
-                    List<string> overAllList = new List<string>();
-                    WordEmtCell oldLastCell = _oldWordEmtCells.Last();
-                    cells = SearchWords(_oldSplitWords.Last(), oldLastCell);
-                    string beforePath = string.Join(_separateMark, _oldSplitWords.Take(_oldSplitWords.Length - 1).ToArray()) + _separateMark;
-
-                    foreach (WordEmtCell wec in cells)
+                    //返す文章のリストが前回とまったく同じと想定される場合
+                    if (splitInput.SequenceEqual(_oldSplitWords) && _oldDepth == returnDepth)
                     {
-                        List<string> candidateStrs = new List<string>();
-                        ConnectToDeepth(wec, beforePath + wec._myWord, returnDepth, candidateStrs);
-                        overAllList.AddRange(candidateStrs);
+                        return _oldReturnList;
                     }
-                    SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(overAllList), returnDepth);
-                    return overAllList;
+                    //返す候補文の深さが前回返したもの以下か、無制限
+                    else if (oldReturnLength >= newReturnLength || (oldReturnLength == -1 && newReturnLength == -1))
+                    {
+                        List<string> reuseReturnStr = RemoveFromOldReturn(splitInput, samePoint, newReturnLength);
+                        SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(reuseReturnStr), returnDepth);
+                        return reuseReturnStr;
+                    }
+                    //完全一致しているが、前回返した文章以降の要素も求められている場合
+                    else if (oldReturnLength < newReturnLength)
+                    {
+                        List<WordEmtCell> cells = new List<WordEmtCell>();
+                        List<string> overAllList = new List<string>();
+                        WordEmtCell oldLastCell = _oldWordEmtCells.Last();
+                        cells = SearchWords(_oldSplitWords.Last(), oldLastCell);
+                        string beforePath = string.Join(_separateMark, _oldSplitWords.Take(_oldSplitWords.Length - 1).ToArray()) + _separateMark;
+
+                        foreach (WordEmtCell wec in cells)
+                        {
+                            List<string> candidateStrs = new List<string>();
+                            ConnectToDeepth(wec, beforePath + wec._myWord, returnDepth, candidateStrs);
+                            overAllList.AddRange(candidateStrs);
+                        }
+                        SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(overAllList), returnDepth);
+                        return overAllList;
+                    }
                 }
             }
 
-            //前回での検索との差を調べ、続くものであった場合途中からの検索にする
+            //前回との文章といずれかの場所まで一致する部分が存在する
+            //※文章量が前回以上だが、上処理のどの条件にも当てはまらない場合　or　前回よりも文字数が少ない場合
             //(例) 1: /aaa bbb ccc ddd
             //     2: /aaa bbb fff nnn
             //この場合、bbb以降の検索となる
-            searchStartCell = RemenberOldParts(splitInput, ref differenceInput);
+            searchStartCell = RemenberOldParts(splitInput, ref differenceInput, samePoint);
             if (differenceInput == null) throw new Exception("differenceInput is null");
         }
         else //初めての検索
@@ -121,7 +125,11 @@ public class WordEstimater
             string lastWord = differenceInput.Last();
             candidateCells = SearchWords(lastWord, searchedWec);
         }
-        if (candidateCells.Count == 0) throw new Exception("did not find to specified word");
+        //一致する候補が見つからない場合
+        if (candidateCells.Count == 0) 
+        {
+            return null;
+        }
 
         //優先度順にソート
         candidateCells = candidateCells.OrderByDescending(x => x._priority).ToList();
@@ -131,7 +139,13 @@ public class WordEstimater
         foreach (WordEmtCell wec in candidateCells)
         {
             List<string> candidateStrs = new List<string>();
-            string beforePath = String.Join(_separateMark, splitInput.Take(splitInput.Length - 1).ToArray()) + _separateMark;
+            string beforePath = "";
+            //リストの要素が1つのみであった場合リストを結合させない(_separateMarkのみになるため)
+            if(splitInput.Length  != 1)
+            {
+                beforePath = String.Join(_separateMark, splitInput.Take(splitInput.Length - 1).ToArray()) + _separateMark;
+            }
+
             ConnectToDeepth(wec, beforePath + wec._myWord, returnDepth, candidateStrs);
             returnList.AddRange(candidateStrs);
         }
@@ -147,17 +161,34 @@ public class WordEstimater
     private int ReturnSamePoint(string[] splitInput)
     {
         int samePoint = -1;
-        for (int i = 0; i < _oldSplitWords.Count() && i < splitInput.Count() ; i++)
+        //前回の入力よりも今回の入力のほうが短い場合
+        if (splitInput.Count() < _oldSplitWords.Count())
         {
-            if (splitInput[i] == _oldSplitWords[i])
-            {
-                samePoint = i;
-            }
-            else
-            {
-                break;
-            }
+            samePoint = IsSameStr(splitInput.Count());
         }
+        //前回の入力よりも今回の入力の長さのほうが同じかそれ以上
+        else
+        {
+            samePoint = IsSameStr(_oldSplitWords.Count());
+        }
+        
+        int IsSameStr(int arrayLength)
+        {
+            int num = -1;
+            for(int i = 0; i < arrayLength; i++)
+            {
+                if (splitInput[i] == _oldSplitWords[i])
+                {
+                    num = i;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            return num;
+        }
+
         return samePoint;
     }
 
@@ -165,10 +196,8 @@ public class WordEstimater
     /// 差分を取得して前回の途中から検索できるようにする
     /// </summary>
     /// <returns>検索に利用される重複部分削除後の配列</returns>
-    private WordEmtCell RemenberOldParts(string[] splitInput, ref string[] differentStrArray)
+    private WordEmtCell RemenberOldParts(string[] splitInput, ref string[] differentStrArray, int samePoint)
     {
-        int samePoint = ReturnSamePoint(splitInput);
-
         //1単語も一致していない場合
         //(例) 1: /aaa bbb ccc
         //     2: /ddd eee fff
@@ -235,8 +264,18 @@ public class WordEstimater
                 trimStr.Add(strs[i]);
             }
 
+            int lastIndex = -1;
+            //maxLengthが-1の場合(文節数が無制限に指定されている場合)はlastIndexをstrsの最後の要素数にする
+            if(maxLength == -1)
+            {
+                lastIndex = strs.Length - 1;
+            }
+            else
+            {
+                lastIndex = maxLength;
+            }
             //inputの文節量とmaxLengthの場所との差
-            for (int i = input.Length ; i <= maxLength; i++)
+            for (int i = input.Length ; i <= lastIndex; i++)
             {
                 if(i <= strs.Length - 1)
                 {

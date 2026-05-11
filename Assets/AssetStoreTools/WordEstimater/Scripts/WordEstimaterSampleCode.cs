@@ -9,13 +9,13 @@ public class WordEstimaterSampleCode : MonoBehaviour
     //検索に利用されるリスト
     List<string> _testList = new List<string>
     {
-        "i love you",
-        "i love",
-        "i love me",
-        "i love my pet",
-        "i love my boyfriend",
-        "i like my brother",
-        "i live in dream"
+        "im love you",
+        "im love",
+        "im love me",
+        "im love my pet",
+        "im love my boyfriend",
+        "im like my brother",
+        "im live in dream"
     };
     //検索で利用する単語と単語を区切る文字
     string _separateMark = " ";
@@ -83,8 +83,15 @@ public class WordEstimaterSampleCode : MonoBehaviour
         string valueFromIF = _inputFieldOfSentence.text;
         //予測変換を取得
         List<string> estimatedStrs = DoEstimateInSentence(valueFromIF);
-        //UIに反映
-        ReflectForUI(estimatedStrs, _inputFieldOfSentence.gameObject);
+        if(estimatedStrs == null) //予測候補が1つもない場合
+        {
+            RefleshUIPool();
+        }
+        else
+        {
+            //UIに反映
+            ReflectForUI(estimatedStrs, _inputFieldOfSentence.gameObject);
+        }
     }
 
     /// <summary>
