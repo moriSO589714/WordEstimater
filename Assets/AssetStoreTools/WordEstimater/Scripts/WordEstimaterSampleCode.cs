@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq.Expressions;
 
 public class WordEstimaterSampleCode : MonoBehaviour
 {
@@ -85,7 +86,8 @@ public class WordEstimaterSampleCode : MonoBehaviour
         List<string> estimatedStrs = DoEstimateInSentence(valueFromIF);
         if(estimatedStrs == null) //予測候補が1つもない場合
         {
-            RefleshUIPool();
+            //要素数0のリストを渡すことで全削除
+            ReplaceUIPool(new List<string>());
         }
         else
         {
@@ -100,15 +102,9 @@ public class WordEstimaterSampleCode : MonoBehaviour
     private List<string> DoEstimateInSentence(string input)
     {
         List<string> estimatedStrs = null;
-        try
-        {
-            //ReturnEstimatedStrsを用い予測変換を実行
-            estimatedStrs = _wordEstimaterOfSentence.ReturnEstimatedStrs(input, _returnDepth);
-        }
-        catch (Exception e)
-        {
-            Debug.Log(e);
-        }
+
+        //ReturnEstimatedStrsを用い予測変換を実行
+        estimatedStrs = _wordEstimaterOfSentence.ReturnEstimatedStrs(input, _returnDepth);
 
         return estimatedStrs;
     }
@@ -138,8 +134,8 @@ public class WordEstimaterSampleCode : MonoBehaviour
     /// </summary>
     private void ReflectForUI(List<string> estimatedList, GameObject inputFieldObject)
     {
-        RefleshUIPool();
-        if (estimatedList == null || estimatedList.Count == 0) return;
+        List<string>restStrs = ReplaceUIPool(estimatedList);
+        if (restStrs == null || restStrs.Count == 0) return;
 
         Vector2 instancePos = inputFieldObject.transform.position;
         instancePos.x += (float)0.4; //表示位置調整用
@@ -155,13 +151,51 @@ public class WordEstimaterSampleCode : MonoBehaviour
         }
     }
 
-    private void RefleshUIPool()
+    private List<string> ReplaceUIPool(List<string> newInput)
     {
-        foreach(GameObject g in _resultUIPool)
+        if(newInput.Count == 0)
         {
-            Destroy(g);
+            foreach(GameObject g in _resultUIPool)
+            {
+                g.SetActive(false);
+            }
+            return new List<string>();
         }
-        _resultUIPool = new List<GameObject>();
+        else if(newInput.Count <= _resultUIPool.Count)
+        {
+            for(int i = 0; i < _resultUIPool.Count; i++)
+            {
+                if(i <= newInput.Count - 1)
+                {
+                    _resultUIPool[i].GetComponent<Text>().text = newInput[i];
+                    _resultUIPool[i].SetActive(true);
+                }
+                else
+                {
+                    _resultUIPool[i].SetActive(false);
+                }
+            }
+            return new List<string>();
+        }
+        else if(newInput.Count > _resultUIPool.Count)
+        {
+            for(int i = 0; i < _resultUIPool.Count; i++)
+            {
+                _resultUIPool[i].GetComponent<Text>().text = newInput[i];
+                _resultUIPool[i].SetActive(true);
+            }
+            List<string> returnStrs = new List<string>();
+            //UIに反映されていないぶんを配列で返す
+            for(int i = _resultUIPool.Count; i < newInput.Count; i++)
+            {
+                returnStrs.Add(newInput[i]);
+            }
+            return returnStrs;
+        }
+        else
+        {
+            throw new Exception("replace ui error");
+        }
     }
 
 }

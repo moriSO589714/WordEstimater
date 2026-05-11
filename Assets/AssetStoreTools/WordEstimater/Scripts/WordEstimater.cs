@@ -65,8 +65,23 @@ public class WordEstimater
                     int oldReturnLength = DepthToOverAll(_oldDepth, _oldSplitWords.Length);
                     int newReturnLength = DepthToOverAll(returnDepth, splitInput.Length);
 
+                    WordEmtCell beforeCell = null;
+                    if (_oldWordEmtCells == null || _oldWordEmtCells.Count == 0)
+                    {
+                        beforeCell = _wordsLib;
+                    }
+                    else
+                    {
+                        beforeCell = _oldWordEmtCells.Last();
+                    }
+                    //前回の最新の文節が書きかけ(該当する単語が無いまま)で1つ前の文節として確定してしまった場合
+                    if (splitInput.Count() >= 2 && beforeCell._childCells.Any(x => x._myWord == splitInput[splitInput.Count() - 2]))
+                    {
+                        differenceInput = splitInput;
+                        searchStartCell = _wordsLib;
+                    }
                     //返す文章のリストが前回とまったく同じと想定される場合
-                    if (splitInput.SequenceEqual(_oldSplitWords) && _oldDepth == returnDepth)
+                    else if (splitInput.SequenceEqual(_oldSplitWords) && _oldDepth == returnDepth)
                     {
                         return _oldReturnList;
                     }
@@ -221,6 +236,10 @@ public class WordEstimater
             throw new Exception("differentStrArray is null");
         }
         //前回の検索開始セルは実際の文章のインデックスよりも１つ上に来るため、1を足す
+        if(_oldWordEmtCells == null || _oldWordEmtCells.Count() == 0)
+        {
+            return _wordsLib;
+        }
         return _oldWordEmtCells[samePoint + 1];
     }
 
