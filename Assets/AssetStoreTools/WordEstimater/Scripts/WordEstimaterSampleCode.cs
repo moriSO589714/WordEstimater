@@ -46,6 +46,7 @@ public class WordEstimaterSampleCode : MonoBehaviour
     [SerializeField] GameObject _resultUI;
     [SerializeField] float _resultUIWidth; //候補と候補の間隔
     [SerializeField] GameObject _uiCanvas;
+    List<GameObject> _resultUIPool = new List<GameObject>();
 
     private void Awake()
     {
@@ -130,6 +131,7 @@ public class WordEstimaterSampleCode : MonoBehaviour
     /// </summary>
     private void ReflectForUI(List<string> estimatedList, GameObject inputFieldObject)
     {
+        RefleshUIPool();
         if (estimatedList == null || estimatedList.Count == 0) return;
 
         Vector2 instancePos = inputFieldObject.transform.position;
@@ -142,6 +144,17 @@ public class WordEstimaterSampleCode : MonoBehaviour
             GameObject createUIObj = Instantiate(_resultUI, instancePos, Quaternion.identity, parent: _uiCanvas.transform);
             //値を反映
             createUIObj.GetComponent<Text>().text = estimated;
+            _resultUIPool.Add(createUIObj);
         }
     }
+
+    private void RefleshUIPool()
+    {
+        foreach(GameObject g in _resultUIPool)
+        {
+            Destroy(g);
+        }
+        _resultUIPool = new List<GameObject>();
+    }
+
 }

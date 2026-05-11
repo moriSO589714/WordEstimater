@@ -36,12 +36,14 @@ public class WordEstimater
     {
         string[] splitInput = input.Split(_separateMark);
         //最後が区切り文字で終わっている場合は除去
-        if(splitInput.Last() == "")
+
+        if (splitInput.Last() == "")
         {
             List<string> removed = splitInput.ToList();
             removed.RemoveAt(splitInput.Length - 1);
             splitInput = removed.ToArray();
         }
+
         string[] differenceInput = null;
         int samePoint = -1;
         WordEmtCell searchStartCell = null;
@@ -61,29 +63,34 @@ public class WordEstimater
                 int oldReturnLength = DepthToOverAll(_oldDepth, _oldSplitWords.Length);
                 int newReturnLength = DepthToOverAll(returnDepth, splitInput.Length);
 
+                //完全に前回の入力と同じかつ、返す長さも同じ
+                if (splitInput.SequenceEqual(_oldSplitWords) && _oldDepth == returnDepth)
+                {
+                    return _oldReturnList;
+                }
                 //返す候補文の深さが前回返したもの以下か、無制限
-                if(oldReturnLength >= newReturnLength || (oldReturnLength == -1 && newReturnLength == -1))
+                else if (oldReturnLength >= newReturnLength || (oldReturnLength == -1 && newReturnLength == -1))
                 {
                     List<string> reuseReturnStr = RemoveFromOldReturn(splitInput, samePoint, newReturnLength);
-                    SetDatas(input ,splitInput, _oldWordEmtCells, new List<string>(reuseReturnStr), returnDepth);
+                    SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(reuseReturnStr), returnDepth);
                     return reuseReturnStr;
                 }
                 //完全一致しているが、前回返した文章以降の要素も求められている場合
-                else if(oldReturnLength < newReturnLength)
+                else if (oldReturnLength < newReturnLength)
                 {
                     List<WordEmtCell> cells = new List<WordEmtCell>();
                     List<string> overAllList = new List<string>();
                     WordEmtCell oldLastCell = _oldWordEmtCells.Last();
                     cells = SearchWords(_oldSplitWords.Last(), oldLastCell);
                     string beforePath = string.Join(_separateMark, _oldSplitWords.Take(_oldSplitWords.Length - 1).ToArray()) + _separateMark;
-                    
-                    foreach(WordEmtCell wec in cells)
+
+                    foreach (WordEmtCell wec in cells)
                     {
                         List<string> candidateStrs = new List<string>();
                         ConnectToDeepth(wec, beforePath + wec._myWord, returnDepth, candidateStrs);
                         overAllList.AddRange(candidateStrs);
                     }
-                    SetDatas(input ,splitInput, _oldWordEmtCells, new List<string>(overAllList), returnDepth);
+                    SetDatas(input, splitInput, _oldWordEmtCells, new List<string>(overAllList), returnDepth);
                     return overAllList;
                 }
             }
@@ -100,15 +107,15 @@ public class WordEstimater
             differenceInput = splitInput;
             searchStartCell = _wordsLib;
         }
-        
+
         List<WordEmtCell> candidateCells = new List<WordEmtCell>();
         if (differenceInput.Length == 1)
         {
             candidateCells = SearchWords(differenceInput[0], searchStartCell);
         }
-        else if(1 < differenceInput.Length)
+        else if (1 < differenceInput.Length)
         {
-            WordEmtCell searchedWec =  DeepnTree(differenceInput, searchStartCell, recordCells);
+            WordEmtCell searchedWec = DeepnTree(differenceInput, searchStartCell, recordCells);
             //指定の語が含まれていなかった場合
             if (searchedWec == null) throw new Exception("did not find to specified sentence");
             string lastWord = differenceInput.Last();
@@ -121,7 +128,7 @@ public class WordEstimater
 
         //入力された文章以後の候補も検索しにいく
         List<string> returnList = new List<string>();
-        foreach(WordEmtCell wec in candidateCells)
+        foreach (WordEmtCell wec in candidateCells)
         {
             List<string> candidateStrs = new List<string>();
             string beforePath = String.Join(_separateMark, splitInput.Take(splitInput.Length - 1).ToArray()) + _separateMark;
@@ -129,7 +136,7 @@ public class WordEstimater
             returnList.AddRange(candidateStrs);
         }
 
-        SetDatas(input ,splitInput, recordCells, returnList, returnDepth);
+        SetDatas(input, splitInput, recordCells, returnList, returnDepth);
         return returnList;
     }
 
@@ -140,7 +147,7 @@ public class WordEstimater
     private int ReturnSamePoint(string[] splitInput)
     {
         int samePoint = -1;
-        for(int i = 0; i < splitInput.Count(); i++)
+        for (int i = 0; i < _oldSplitWords.Count() && i < splitInput.Count() ; i++)
         {
             if (splitInput[i] == _oldSplitWords[i])
             {
@@ -169,13 +176,6 @@ public class WordEstimater
         {
             differentStrArray = splitInput;
             return _wordsLib;
-        }
-        //完全一致している場合
-        //(例) 1: /aaa bbb ccc
-        //     2: /aaa bbb ccc
-        else if(samePoint == splitInput.Length - 1)
-        {
-
         }
         //最後の1単語より前のどこかまで一致している場合
         //(例) 1: /aaa bbb ccc ddd eee
@@ -206,13 +206,16 @@ public class WordEstimater
             string[] strs = oldReturnStr.Split(_separateMark);
             List<string> trimStr = new List<string>();
             bool passFlag = false;
+            //予測候補に新しい文章分の単語数が無かった場合は追加しない
+            if (strs.Count() < input.Count()) continue;
+
             //samePointまでの分節を入れておく
             for (int i = 0; i <= samePoint; i++)
             {
                 trimStr.Add(strs[i]);
             }
 
-            for (int i = samePoint + 1; i < input.Length; i++)
+            for (int i = samePoint + 1; i < strs.Length; i++)
             {
                 //最後の入力のみは書きかけでも含めるようにする
                 if (i == input.Length - 1)
@@ -220,8 +223,9 @@ public class WordEstimater
                     if (!strs[i].StartsWith(input[i]))
                     {
                         passFlag = true;
-                        break;
                     }
+                    trimStr.Add(strs[i]);
+                    break;
                 }
                 else if (strs[i] != input[i])
                 {
@@ -240,11 +244,10 @@ public class WordEstimater
                 }
             }
 
-            //全単語が出力する文字列に含まれていた場合リストに追加
-            if (!passFlag)
+            string mergeStr = string.Join(_separateMark, trimStr);
+            //全単語が出力する文字列に含まれている&既にリストに追加されていない場合リストに追加
+            if (!passFlag && !removedStrArray.Contains(mergeStr))
             {
-                //最後に含まれるseparateMarkを除去する
-                string mergeStr = string.Join(_separateMark, trimStr);
                 removedStrArray.Add(mergeStr);
             }
         }
