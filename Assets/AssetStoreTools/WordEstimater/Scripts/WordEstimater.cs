@@ -75,7 +75,7 @@ public class WordEstimater
                         beforeCell = _oldWordEmtCells.Last();
                     }
                     //前回の最新の文節が書きかけ(該当する単語が無いまま)で1つ前の文節として確定してしまった場合
-                    if (splitInput.Count() >= 2 && beforeCell._childCells.Any(x => x._myWord == splitInput[splitInput.Count() - 2]))
+                    if (splitInput.Count() >= 2 && !beforeCell._childCells.Any(x => x._myWord == splitInput[splitInput.Count() - 2]))
                     {
                         differenceInput = splitInput;
                         searchStartCell = _wordsLib;
