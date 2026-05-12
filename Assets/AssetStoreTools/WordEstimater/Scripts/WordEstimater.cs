@@ -2,24 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 public class WordEstimater
 {
     private WordEmtCell _wordsLib;
     private string _separateMark;
 
-    private string _oldInput = "";
-    private int _oldDepth;
+    //行った入力を保存しておくためのキャッシュ
+    private Dictionary<(int cashDepth, string cashInput), List<string>> _inputCash = new Dictionary<(int, string), List<string>>();
     public WordEstimater(WordEmtCell wordsLib, string separateMark)
     {
         _wordsLib = wordsLib;
         _separateMark = separateMark;
-    }
-
-    private void SetDatas(string oldInput, int oldDepth)
-    {
-        _oldInput = oldInput;
-        _oldDepth = oldDepth;
     }
 
     /// <summary>
@@ -30,6 +25,14 @@ public class WordEstimater
     public List<string> ReturnEstimatedStrs(string input, int returnDepth)
     {
         string[] splitInput = input.Split(_separateMark, StringSplitOptions.RemoveEmptyEntries);
+
+        //キャッシュに同一の検索が保存されていないか確認
+        List<string> oldReturn = isSavedInCash(returnDepth, input);
+        if (oldReturn.Count != 0)
+        {
+            //以前返したことがあるなら、その値を返す
+            return oldReturn;
+        }
 
         WordEmtCell searchStartCell = _wordsLib;
         List<WordEmtCell> candidateCells = new List<WordEmtCell>();
@@ -70,11 +73,13 @@ public class WordEstimater
             returnList.AddRange(candidateStrs);
         }
 
-        SetDatas(input, returnDepth);
         if(returnList == null || returnList.Count == 0)
         {
             return null;
         }
+
+        //キャッシュに保存して、リストを返す
+        _inputCash[(returnDepth, input)] = new List<string>(returnList);
         return returnList;
     }
 
@@ -118,6 +123,13 @@ public class WordEstimater
 
             ConnectToDeepth(child, nextPath, depth - 1, returnStrs);
         }
+    }
+
+    private List<string> isSavedInCash(int priority, string input)
+    {
+        List<string> result = _inputCash.FirstOrDefault(x => x.Key.cashDepth == priority && x.Key.cashInput == input).Value;
+        if (result != null) return result;
+        else return new List<string>();
     }
 }
 

@@ -132,16 +132,9 @@ public class WordEstimaterSampleCode : MonoBehaviour
     private List<string> DoEstimateInWord(string input)
     {
         List<string> estimatedStrs = null;
-        try
-        {
-            //ReturnEstimatedStrsを用い予測変換を実行
-            //※単語検索は文章での予測が無いため、returnDepthは0
-            estimatedStrs = _wordEstimaterOfWord.ReturnEstimatedStrs(input, 0);
-        }
-        catch (Exception e)
-        {
-            Debug.Log(e);
-        }
+        //ReturnEstimatedStrsを用い予測変換を実行
+        //※単語検索は文章での予測が無いため、returnDepthは0
+        estimatedStrs = _wordEstimaterOfWord.ReturnEstimatedStrs(input, 0);
 
         return estimatedStrs;
     }
